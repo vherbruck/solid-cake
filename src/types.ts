@@ -1,14 +1,12 @@
 import type { ScaleLinear, ScaleTime, ScalePower, ScaleBand } from "d3-scale";
 
-/** Any d3 scale with domain/range methods */
-export type AnyScale =
-  | ScaleLinear<number, number>
-  | ScaleTime<number, number>
-  | ScalePower<number, number>
-  | ScaleBand<string>;
+/** Any d3 scale instance with domain/range/copy methods */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyScale = any;
 
-/** Scale factory — a function that returns a new scale instance */
-export type ScaleFactory = (() => AnyScale) | AnyScale;
+/** Scale factory — a d3 scale constructor (e.g., scaleLinear) or a pre-configured scale instance */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ScaleFactory = ((...args: any[]) => AnyScale) | AnyScale;
 
 /** Accessor input: string key, numeric index, function, or array of those */
 export type AccessorInput =
