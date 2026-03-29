@@ -88,6 +88,21 @@ function MyChart() {
 />
 ```
 
+## SolidJS Architecture Changes
+
+Solid Cake isn't a line-for-line port of Layer Cake. SolidJS's reactivity model enabled several architectural improvements:
+
+| Layer Cake (Svelte) | Solid Cake (SolidJS) | Why |
+|---------------------|----------------------|-----|
+| ~40 writable stores synced via `$:` blocks | `createMemo` chains with direct signal reads | Changing `yDomain` only recomputes `yScale` and `yGet` -- not `xScale`. Svelte's `$:` blocks are coarser-grained. |
+| Eager computation of all 4 scales (x/y/z/r) | Lazy `createMemo` -- unused scales never compute | If your chart only uses x and y, z and r are never instantiated. |
+| Dual access: context stores + slot props | Context only via `useChart()` | SolidJS context reads are zero-cost (no subscription overhead), so slot props are redundant. |
+| Canvas children subscribe to ctx store | `createEffect` auto-tracks dependencies | A canvas component that reads `yScale()` won't redraw when `xScale()` changes. Automatic, granular, no manual subscriptions. |
+| `bind:clientWidth` for dimension tracking | `ResizeObserver` | SolidJS doesn't have Svelte's bind syntax. ResizeObserver is more explicit and equally performant. |
+| `structuredClone` for history snapshots | Shared with framework-agnostic history manager | History/undo is a separate concern, not baked into the chart library. |
+| No interactive primitives | `<DragHandles>` with `setPointerCapture` | SVG circles in the same coordinate system as lines -- no dual-layer sync bugs. Pointer capture means no lost events. |
+| Single rendering target per layout | Mixed SVG + Canvas + HTML in one chart | Dense data on Canvas, interactive elements on SVG, tooltips on HTML -- all sharing one scale context. |
+
 ## Acknowledgments
 
 Solid Cake's architecture is heavily inspired by [Layer Cake](https://layercake.graphics/) by Michael Keller -- the best composable chart library in any framework. The context-provided scales, accessor pattern, domain/range pipeline, and layout component model are all ported from Layer Cake's elegant Svelte implementation. If you're working in Svelte, use Layer Cake. If you're in SolidJS, we hope this gets you close.
