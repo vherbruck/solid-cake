@@ -5,9 +5,9 @@
   "type": "module",
   "exports": {
     ".": {
+      "solid": "./src/index.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts",
-      "solid": "./src/index.ts"
+      "types": "./dist/index.d.ts"
     }
   },
   "main": "./dist/index.js",
