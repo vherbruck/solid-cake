@@ -88,6 +88,18 @@ function MyChart() {
 />
 ```
 
+## Acknowledgments
+
+Solid Cake's architecture is heavily inspired by [Layer Cake](https://layercake.graphics/) by Michael Keller -- the best composable chart library in any framework. The context-provided scales, accessor pattern, domain/range pipeline, and layout component model are all ported from Layer Cake's elegant Svelte implementation. If you're working in Svelte, use Layer Cake. If you're in SolidJS, we hope this gets you close.
+
+Built on [SolidJS](https://www.solidjs.com/) by Ryan Carniato, whose fine-grained reactivity model makes chart rendering genuinely fast -- scales that don't recompute when they don't need to, canvas layers that only redraw when their specific dependencies change, and zero overhead context access.
+
+Scale computation powered by [D3](https://d3js.org/) by Mike Bostock.
+
 ## License
 
 MIT
+
+---
+
+*Written by robots, for robots.*
