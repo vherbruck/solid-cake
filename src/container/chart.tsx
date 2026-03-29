@@ -13,7 +13,6 @@ import type {
   DomainInput,
   RangeInput,
   Padding,
-  DimensionName,
   ScaleFactory,
 } from "../types.ts";
 import { makeAccessor } from "../utils/make-accessor.ts";
@@ -94,50 +93,81 @@ export function Chart(props: ChartProps): JSX.Element {
     return calcExtents(flatData(), fields);
   });
 
-  function computeDomain(dim: DimensionName, userDomain: DomainInput | undefined): Accessor<[number, number]> {
-    return createMemo(() => {
-      const ext = extents()[dim] ?? [null, null];
-      if (typeof userDomain === "function") {
-        return userDomain(ext as [number, number]);
-      }
-      return partialDomain(ext, userDomain as [number | null, number | null] | undefined);
-    });
-  }
+  const xDomainFinal = createMemo(() => {
+    const ext = extents().x ?? [null, null];
+    const ud = props.xDomain;
+    if (typeof ud === "function") return ud(ext as [number, number]);
+    return partialDomain(ext, ud as [number | null, number | null] | undefined);
+  });
 
-  const xDomainFinal = computeDomain("x", props.xDomain);
-  const yDomainFinal = computeDomain("y", props.yDomain);
-  const zDomainFinal = computeDomain("z", props.zDomain);
-  const rDomainFinal = computeDomain("r", props.rDomain);
+  const yDomainFinal = createMemo(() => {
+    const ext = extents().y ?? [null, null];
+    const ud = props.yDomain;
+    if (typeof ud === "function") return ud(ext as [number, number]);
+    return partialDomain(ext, ud as [number | null, number | null] | undefined);
+  });
 
-  function buildScale(
-    dim: DimensionName,
-    factory: ScaleFactory | undefined,
-    domain: Accessor<[number, number]>,
-    reverse: boolean,
-    range: RangeInput | undefined,
-    padding: [number, number] | undefined,
-    nice: boolean | number,
-  ): Accessor<AnyScale> {
-    const defaults: Record<DimensionName, () => AnyScale> = { x: scaleLinear as () => AnyScale, y: scaleLinear as () => AnyScale, z: scaleLinear as () => AnyScale, r: scaleSqrt as () => AnyScale };
-    return createMemo(() =>
-      createScaleFn({
-        dim,
-        scaleFactory: factory ?? defaults[dim],
-        domain: domain(),
-        width: innerWidth(),
-        height: innerHeight(),
-        reverse,
-        range,
-        padding,
-        nice,
-      }),
-    );
-  }
+  const zDomainFinal = createMemo(() => {
+    const ext = extents().z ?? [null, null];
+    const ud = props.zDomain;
+    if (typeof ud === "function") return ud(ext as [number, number]);
+    return partialDomain(ext, ud as [number | null, number | null] | undefined);
+  });
 
-  const xScaleFinal = buildScale("x", props.xScale, xDomainFinal, props.xReverse ?? false, props.xRange, props.xPadding, props.xNice ?? false);
-  const yScaleFinal = buildScale("y", props.yScale, yDomainFinal, props.yReverse ?? false, props.yRange, props.yPadding, props.yNice ?? false);
-  const zScaleFinal = buildScale("z", props.zScale, zDomainFinal, false, props.zRange, undefined, false);
-  const rScaleFinal = buildScale("r", props.rScale, rDomainFinal, false, props.rRange, undefined, false);
+  const rDomainFinal = createMemo(() => {
+    const ext = extents().r ?? [null, null];
+    const ud = props.rDomain;
+    if (typeof ud === "function") return ud(ext as [number, number]);
+    return partialDomain(ext, ud as [number | null, number | null] | undefined);
+  });
+
+  const xScaleFinal = createMemo(() => createScaleFn({
+    dim: "x",
+    scaleFactory: props.xScale ?? scaleLinear,
+    domain: xDomainFinal(),
+    width: innerWidth(),
+    height: innerHeight(),
+    reverse: props.xReverse ?? false,
+    range: props.xRange,
+    padding: props.xPadding,
+    nice: props.xNice ?? false,
+  }));
+
+  const yScaleFinal = createMemo(() => createScaleFn({
+    dim: "y",
+    scaleFactory: props.yScale ?? scaleLinear,
+    domain: yDomainFinal(),
+    width: innerWidth(),
+    height: innerHeight(),
+    reverse: props.yReverse ?? false,
+    range: props.yRange,
+    padding: props.yPadding,
+    nice: props.yNice ?? false,
+  }));
+
+  const zScaleFinal = createMemo(() => createScaleFn({
+    dim: "z",
+    scaleFactory: props.zScale ?? scaleLinear,
+    domain: zDomainFinal(),
+    width: innerWidth(),
+    height: innerHeight(),
+    reverse: false,
+    range: props.zRange,
+    padding: undefined,
+    nice: false,
+  }));
+
+  const rScaleFinal = createMemo(() => createScaleFn({
+    dim: "r",
+    scaleFactory: props.rScale ?? scaleSqrt,
+    domain: rDomainFinal(),
+    width: innerWidth(),
+    height: innerHeight(),
+    reverse: false,
+    range: props.rRange,
+    padding: undefined,
+    nice: false,
+  }));
 
   function buildGetter(acc: Accessor<ReturnType<typeof makeAccessor>>, scale: Accessor<AnyScale>) {
     return createMemo(() => {
