@@ -5,6 +5,7 @@ import {
   createSignal,
   createEffect,
   useContext,
+  onMount,
   onCleanup,
 } from "solid-js";
 import { useChart } from "../context/chart-context.ts";
@@ -23,6 +24,7 @@ export function useCanvasContext(): CanvasRenderingContext2D | null {
 export interface CanvasProps {
   zIndex?: number;
   class?: string;
+  /** Render callback — fires via rAF when scales or data change. */
   children?: ((ctx: CanvasRenderingContext2D, chart: ReturnType<typeof useChart>) => void) | JSX.Element;
 }
 
@@ -32,7 +34,7 @@ function scaleCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, w
   canvas.height = height * dpr;
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
-  ctx.scale(dpr, dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 export function Canvas(props: CanvasProps): JSX.Element {
@@ -42,21 +44,53 @@ export function Canvas(props: CanvasProps): JSX.Element {
   let canvasRef: HTMLCanvasElement | undefined;
   const [ctx, setCtx] = createSignal<CanvasRenderingContext2D | null>(null);
 
-  createEffect(() => {
+  // Initialize canvas context on mount
+  onMount(() => {
     if (!canvasRef) return;
     const c = canvasRef.getContext("2d");
-    if (!c) return;
-    scaleCanvas(canvasRef, c, innerWidth(), innerHeight());
-    setCtx(c);
+    if (c) setCtx(c);
   });
 
+  // Dirty flag + rAF loop for batched rendering
+  let dirty = true;
+  let frameId = 0;
+
+  // Track reactive dependencies — any change sets dirty flag
   createEffect(() => {
-    const c = ctx();
-    if (!c || typeof props.children !== "function") return;
-    const w = innerWidth();
-    const h = innerHeight();
-    c.clearRect(0, 0, w, h);
-    (props.children as (ctx: CanvasRenderingContext2D, chart: ReturnType<typeof useChart>) => void)(c, chart);
+    // Read signals to establish tracking
+    ctx();
+    innerWidth();
+    innerHeight();
+    chart.xScale();
+    chart.yScale();
+    chart.data();
+    chart.xDomain();
+    chart.yDomain();
+    dirty = true;
+  });
+
+  const loop = () => {
+    if (dirty && canvasRef) {
+      dirty = false;
+      const c = ctx();
+      if (c && typeof props.children === "function") {
+        const w = innerWidth();
+        const h = innerHeight();
+        // Re-scale canvas for HiDPI on each render (dimensions may have changed)
+        scaleCanvas(canvasRef, c, w, h);
+        c.clearRect(0, 0, w, h);
+        (props.children as (ctx: CanvasRenderingContext2D, chart: ReturnType<typeof useChart>) => void)(c, chart);
+      }
+    }
+    frameId = requestAnimationFrame(loop);
+  };
+
+  onMount(() => {
+    frameId = requestAnimationFrame(loop);
+  });
+
+  onCleanup(() => {
+    cancelAnimationFrame(frameId);
   });
 
   return (
